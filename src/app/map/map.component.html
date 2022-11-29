@@ -1,0 +1,10 @@
+<label for="start">Coordonnées du point de départ : </label>
+<input id="start" type="text" [formControl]="start" [attr.disabled]="true"><br />
+<label for="end">Coordonnées du point d'arrivé : </label>
+<input id="end" type="text" [formControl]="end" [attr.disabled]="true"><br />
+
+<div class="map-container">
+  <div class="map-frame">
+    <div id="map"></div>
+  </div>
+</div>
