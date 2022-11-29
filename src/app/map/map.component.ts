@@ -49,8 +49,6 @@ export class MapComponent implements AfterViewInit {
   }
 
   public drawRoute(): void {
-    console.log(this.start.value);
-    console.log(this.end.value);
     const baseurl =
       'https://wxs.ign.fr/calcul/geoportail/itineraire/rest/1.0.0/route?';
     const resource = 'resource=bdtopo-osrm';
@@ -58,9 +56,8 @@ export class MapComponent implements AfterViewInit {
     const end = 'end=' + this.end.value;
     const geometryFormat = 'geometryFormat=' + 'polyline';
     const args = [resource, start, end, geometryFormat].join('&');
-    console.log(args);
+    console.log('get ' + baseurl + args);
     this.http.get<any>(baseurl + args).subscribe((data) => {
-      //console.log(data.geometry);
       let antPolyline = new AntPath(Polyline.decode(data.geometry));
       antPolyline.addTo(this.map);
     });
