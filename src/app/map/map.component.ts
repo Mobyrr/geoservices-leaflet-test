@@ -79,7 +79,7 @@ export class MapComponent implements AfterViewInit {
               ' ' +
               step.instruction.modifier +
               ' (' +
-              step.attributes.nom_1_droite +
+              step.attributes.name.nom_1_droite +
               ')<br/>';
           }
         }

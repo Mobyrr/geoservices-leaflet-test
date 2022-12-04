@@ -25,29 +25,30 @@ export class CourseService {
   };
 
   public getRoute(
-    start: string,
-    end: string,
+    fromCoordinates: string,
+    toCoordinates: string,
     transportType: string = 'car'
   ): Observable<CourseResponse> {
+    const args = [
+      'deliveryManCoordinates=' + fromCoordinates,
+      'dropOffCoordinates=' + toCoordinates,
+      'transportType=' + transportType,
+    ].join('&');
     return this.http
-      .post<CourseResponse>(
-        this.baseUrl + '/course/route',
-        {
-          deliveryManCoordinates: start,
-          dropOffCoordinates: end,
-          transportType: transportType,
-        },
-        this.httpOptions
-      )
+      .get<CourseResponse>(this.baseUrl + '/course/route?' + args)
       .pipe(retry(1), catchError(this.errorHandler));
   }
 
   public updatePosition(deliveryManId: number, position: string) {
     return this.http
-      .patch(this.baseUrl + 'geolocalisation', {
-        deliveryManId: deliveryManId,
-        position: position,
-      })
+      .patch(
+        this.baseUrl + 'geolocalisation',
+        {
+          deliveryManId: deliveryManId,
+          position: position,
+        },
+        this.httpOptions
+      )
       .pipe(retry(1), catchError(this.errorHandler));
   }
 

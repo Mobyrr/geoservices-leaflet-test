@@ -9,10 +9,12 @@ export class CourseResponse {
         {
           geometry: string;
           attributes: {
-            nom_1_gauche: string;
-            nom_1_droite: string;
-            cpx_numero: string;
-            cpx_toponyme_route_nommee: string;
+            name: {
+              nom_1_gauche: string;
+              nom_1_droite: string;
+              cpx_numero: string;
+              cpx_toponyme_route_nommee: string;
+            };
             cleabs: string;
           };
           distance: number;
