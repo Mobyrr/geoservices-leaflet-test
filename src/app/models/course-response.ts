@@ -21,7 +21,7 @@ export class CourseResponse {
           duration: number;
           instruction: {
             type: string;
-            modifier: string;
+            modifier: string | undefined;
           };
         }
       ];

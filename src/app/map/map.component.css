@@ -1,3 +1,8 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+}
+
 .map-container {
   margin: 15px 0;
 }
@@ -7,8 +12,21 @@
   height: 500px;
   width: 800px;
   box-shadow: 0 5px 10px #0002;
+  border-radius: 4px;
 }
 
 #map {
   height: 100%;
+  border-radius: 4px;
+}
+
+#steps {
+  width: 270px;
+  height: 560px;
+  overflow-y: scroll;
+}
+
+#steps >>> button {
+  display: block;
+  width: 250px;
 }

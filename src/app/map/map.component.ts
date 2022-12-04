@@ -3,6 +3,7 @@ import { FormControl } from '@angular/forms';
 import * as Polyline from 'google-polyline';
 import * as L from 'leaflet';
 import { AntPath } from 'leaflet-ant-path';
+import { CourseResponse } from '../models/course-response';
 import { CourseService } from '../services/course.service';
 
 @Component({
@@ -17,8 +18,10 @@ export class MapComponent implements AfterViewInit {
   public duration = new FormControl('');
   public distance = new FormControl('');
   public steps = new FormControl('');
-  private antPolyline: any;
+  private pathLine: any;
+  private stepLine: any;
   private userLocalisation: L.CircleMarker | undefined;
+  private routeData: CourseResponse | undefined;
 
   constructor(private courceService: CourseService) {}
 
@@ -63,26 +66,42 @@ export class MapComponent implements AfterViewInit {
     this.courceService
       .getRoute(this.start.value, this.end.value, 'car')
       .subscribe((data) => {
-        if (this.antPolyline !== undefined)
-          this.map?.removeLayer(this.antPolyline);
-        this.antPolyline = new AntPath(Polyline.decode(data.geometry));
-        this.antPolyline.addTo(this.map);
+        this.routeData = data;
+        if (this.pathLine !== undefined) this.map?.removeLayer(this.pathLine);
+        this.pathLine = new AntPath(Polyline.decode(data.geometry));
+        this.pathLine.addTo(this.map);
         this.duration.setValue(Number(data.duration).toFixed(2) + ' minutes');
         this.distance.setValue(Number(data.distance).toFixed(2) + ' mètres');
-        let steps = document.getElementById('steps');
-        if (steps == null) return;
-        steps.innerHTML = '';
-        for (let portion of data.portions) {
-          for (let step of portion.steps) {
-            steps.innerHTML +=
+        let buttons: HTMLButtonElement[] = [];
+        data.portions.forEach((portion, portionIndex) => {
+          portion.steps.forEach((step, stepIndex) => {
+            let buttonText =
               step.instruction.type +
-              ' ' +
-              step.instruction.modifier +
-              ' (' +
-              step.attributes.name.nom_1_droite +
-              ')<br/>';
-          }
-        }
+              (step.instruction.modifier === undefined
+                ? ''
+                : ' ' + step.instruction.modifier);
+            let name = step.attributes.name;
+            if (name.nom_1_gauche === name.nom_1_droite) {
+              if (name.nom_1_gauche !== '')
+                buttonText += ' (' + name.nom_1_gauche + ')';
+            } else {
+              buttonText +=
+                ' (' +
+                name.nom_1_gauche +
+                (name.nom_1_gauche !== '' && name.nom_1_droite !== ''
+                  ? ' / '
+                  : '') +
+                name.nom_1_droite;
+            }
+            let button = document.createElement('button');
+            button.appendChild(document.createTextNode(buttonText));
+            button.addEventListener('click', () =>
+              this.showStep(stepIndex, portionIndex)
+            );
+            buttons.push(button);
+          });
+        });
+        document.getElementById('steps')!.replaceChildren(...buttons);
       });
   }
 
@@ -106,5 +125,21 @@ export class MapComponent implements AfterViewInit {
       fillOpacity: 1,
     });
     this.userLocalisation.addTo(this.map);
+  }
+
+  public async showStep(stepIndex: number, portionIndex: number) {
+    if (this.routeData === undefined) return;
+    let step = this.routeData.portions[portionIndex].steps[stepIndex];
+
+    if (this.stepLine !== undefined) this.map?.removeLayer(this.stepLine);
+    this.stepLine = new AntPath(Polyline.decode(step.geometry), {
+      color: 'red',
+      delay: 700,
+      opacity: 0.8,
+      pulseColor: '#FCC',
+    });
+
+    this.stepLine.addTo(this.map);
+    this.map?.fitBounds(this.stepLine.getBounds());
   }
 }
