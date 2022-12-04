@@ -1,9 +1,9 @@
-import { HttpClient } from '@angular/common/http';
 import { AfterViewInit, Component, Injectable } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import * as Polyline from 'google-polyline';
 import * as L from 'leaflet';
 import { AntPath } from 'leaflet-ant-path';
+import { CourseService } from '../services/course.service';
 
 @Component({
   selector: 'app-map',
@@ -20,7 +20,7 @@ export class MapComponent implements AfterViewInit {
   private antPolyline: any;
   private userLocalisation: L.CircleMarker | undefined;
 
-  constructor(private http: HttpClient) {}
+  constructor(private courceService: CourseService) {}
 
   ngAfterViewInit(): void {
     this.initMap();
@@ -58,39 +58,36 @@ export class MapComponent implements AfterViewInit {
   }
 
   public drawRoute(): void {
-    const baseurl =
-      'https://wxs.ign.fr/calcul/geoportail/itineraire/rest/1.0.0/route?';
-    const resource = 'resource=bdtopo-osrm';
-    const start = 'start=' + this.start.value;
-    const end = 'end=' + this.end.value;
-    const geometryFormat = 'geometryFormat=' + 'polyline';
-    const args = [resource, start, end, geometryFormat].join('&');
-    console.log('get ' + baseurl + args);
-    this.http.get<any>(baseurl + args).subscribe((data) => {
-      if (this.antPolyline !== undefined)
-        this.map?.removeLayer(this.antPolyline);
-      this.antPolyline = new AntPath(Polyline.decode(data.geometry));
-      this.antPolyline.addTo(this.map);
-      this.duration.setValue(Number(data.duration).toFixed(2) + ' minutes');
-      this.distance.setValue(Number(data.distance).toFixed(2) + ' mètres');
-      let steps = document.getElementById('steps');
-      if (steps == null) return;
-      steps.innerHTML = '';
-      for (let portion of data.portions) {
-        for (let step of portion.steps) {
-          steps.innerHTML +=
-            step.instruction.type +
-            ' ' +
-            step.instruction.modifier +
-            ' (' +
-            step.attributes.name.nom_1_droite +
-            ')<br/>';
+    if (this.start.value === null || this.end.value === null) throw new Error();
+
+    this.courceService
+      .getRoute(this.start.value, this.end.value, 'car')
+      .subscribe((data) => {
+        if (this.antPolyline !== undefined)
+          this.map?.removeLayer(this.antPolyline);
+        this.antPolyline = new AntPath(Polyline.decode(data.geometry));
+        this.antPolyline.addTo(this.map);
+        this.duration.setValue(Number(data.duration).toFixed(2) + ' minutes');
+        this.distance.setValue(Number(data.distance).toFixed(2) + ' mètres');
+        let steps = document.getElementById('steps');
+        if (steps == null) return;
+        steps.innerHTML = '';
+        for (let portion of data.portions) {
+          for (let step of portion.steps) {
+            steps.innerHTML +=
+              step.instruction.type +
+              ' ' +
+              step.instruction.modifier +
+              ' (' +
+              step.attributes.nom_1_droite +
+              ')<br/>';
+          }
         }
-      }
-    });
+      });
   }
 
   public updatePositition(e: L.LocationEvent) {
+    this.courceService.updatePosition(123, e.latlng.lng + ',' + e.latlng.lat);
     if (this.map === undefined) return;
     if (this.userLocalisation !== undefined) {
       this.map?.removeLayer(this.userLocalisation);
