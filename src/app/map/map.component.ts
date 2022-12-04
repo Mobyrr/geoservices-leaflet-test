@@ -66,8 +66,9 @@ export class MapComponent implements AfterViewInit {
     this.courceService
       .getRoute(this.start.value, this.end.value, 'car')
       .subscribe((data) => {
-        this.routeData = data;
+        if (this.stepLine !== undefined) this.map?.removeLayer(this.stepLine);
         if (this.pathLine !== undefined) this.map?.removeLayer(this.pathLine);
+        this.routeData = data;
         this.pathLine = new AntPath(Polyline.decode(data.geometry));
         this.pathLine.addTo(this.map);
         this.duration.setValue(Number(data.duration).toFixed(2) + ' minutes');
