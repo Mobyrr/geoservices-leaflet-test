@@ -13,25 +13,30 @@ import { CourseService } from '../services/course.service';
 })
 @Injectable()
 export class MapComponent implements AfterViewInit {
-  public start = new FormControl('');
-  public end = new FormControl('');
+  public start: string | undefined;
+  public end: string | undefined;
+  private startMarker: L.CircleMarker<any> | undefined;
+  private endMarker: L.CircleMarker<any> | undefined;
   public duration = new FormControl('');
   public distance = new FormControl('');
   public steps = new FormControl('');
-  private pathLine: any;
+  private routeElements: any[] = [];
   private stepLine: any;
   private userLocalisation: L.CircleMarker | undefined;
   private routeData: CourseResponse | undefined;
+  private buttons!: HTMLElement;
+  private map!: L.Map;
 
   constructor(private courceService: CourseService) {}
 
-  ngAfterViewInit(): void {
+  ngAfterViewInit() {
     this.initMap();
+    let buttons = document.getElementById('steps');
+    if (buttons === null) throw new Error();
+    this.buttons = buttons;
   }
 
-  private map: L.Map | undefined;
-
-  private initMap(): void {
+  private initMap() {
     this.map = L.map('map', {
       center: [49.43, 1.095],
       zoom: 12,
@@ -50,9 +55,20 @@ export class MapComponent implements AfterViewInit {
 
     this.map.on('click', (evt) => {
       let coords = evt.latlng.lng + ',' + evt.latlng.lat;
-      this.start.setValue(this.end.value);
-      this.end.setValue(coords);
-      if (this.start.value !== '' && this.end.value !== '') this.drawRoute();
+      this.start = this.end;
+      this.end = coords;
+      this.startMarker = this.endMarker;
+      this.endMarker = L.circleMarker([evt.latlng.lat, evt.latlng.lng], {
+        radius: 5,
+        color: '#000',
+        weight: 1,
+        opacity: 0.5,
+        fillColor: '#05F',
+        fillOpacity: 1,
+      });
+      this.endMarker.addTo(this.map);
+      this.routeElements.push(this.endMarker);
+      if (this.start !== undefined && this.end !== undefined) this.drawRoute();
     });
 
     this.map.locate({ watch: true, enableHighAccuracy: true });
@@ -61,19 +77,32 @@ export class MapComponent implements AfterViewInit {
   }
 
   public drawRoute(): void {
-    if (this.start.value === null || this.end.value === null) throw new Error();
+    if (this.start === undefined || this.end === undefined) throw new Error();
+    if (this.startMarker === undefined || this.endMarker === undefined)
+      throw new Error();
 
     this.courceService
-      .getRoute(this.start.value, this.end.value, 'car')
+      .getRoute(this.start, this.end, 'car')
       .subscribe((data) => {
-        if (this.stepLine !== undefined) this.map?.removeLayer(this.stepLine);
-        if (this.pathLine !== undefined) this.map?.removeLayer(this.pathLine);
+        if (this.stepLine !== undefined) this.map.removeLayer(this.stepLine);
+
         this.routeData = data;
-        this.pathLine = new AntPath(Polyline.decode(data.geometry));
-        this.pathLine.addTo(this.map);
+        let pathGeometry = Polyline.decode(data.geometry);
+
+        pathGeometry.unshift([
+          this.startMarker!.getLatLng().lat,
+          this.startMarker!.getLatLng().lng,
+        ]);
+        pathGeometry.push([
+          this.endMarker!.getLatLng().lat,
+          this.endMarker!.getLatLng().lng,
+        ]);
+
+        let pathLine = new AntPath(pathGeometry, { delay: 600 });
+        pathLine.addTo(this.map);
+        this.routeElements.push(pathLine);
         this.duration.setValue(Number(data.duration).toFixed(2) + ' minutes');
         this.distance.setValue(Number(data.distance).toFixed(2) + ' mètres');
-        let buttons: HTMLButtonElement[] = [];
         data.portions.forEach((portion, portionIndex) => {
           portion.steps.forEach((step, stepIndex) => {
             let buttonText =
@@ -99,23 +128,21 @@ export class MapComponent implements AfterViewInit {
             button.addEventListener('click', () =>
               this.showStep(stepIndex, portionIndex)
             );
-            buttons.push(button);
+            this.buttons!.appendChild(button);
           });
         });
-        document.getElementById('steps')!.replaceChildren(...buttons);
       });
   }
 
   public updatePositition(e: L.LocationEvent) {
     this.courceService.updatePosition(123, e.latlng.lng + ',' + e.latlng.lat);
-    if (this.map === undefined) return;
     if (this.userLocalisation !== undefined) {
-      this.map?.removeLayer(this.userLocalisation);
+      this.map.removeLayer(this.userLocalisation);
     } else {
       // première fois qu'on trouve la position
       this.map.setView(e.latlng, 13, { animate: true });
-      if (this.start.value == '' && this.end.value == '')
-        this.end.setValue(e.latlng.lng + ',' + e.latlng.lat);
+      if (this.start === undefined && this.end === undefined)
+        this.end = e.latlng.lng + ',' + e.latlng.lat;
     }
     this.userLocalisation = L.circleMarker([e.latlng.lat, e.latlng.lng], {
       radius: 5,
@@ -132,15 +159,25 @@ export class MapComponent implements AfterViewInit {
     if (this.routeData === undefined) return;
     let step = this.routeData.portions[portionIndex].steps[stepIndex];
 
-    if (this.stepLine !== undefined) this.map?.removeLayer(this.stepLine);
+    if (this.stepLine !== undefined) this.map.removeLayer(this.stepLine);
     this.stepLine = new AntPath(Polyline.decode(step.geometry), {
       color: 'red',
-      delay: 700,
+      delay: 800,
       opacity: 0.8,
       pulseColor: '#FCC',
     });
 
     this.stepLine.addTo(this.map);
-    this.map?.fitBounds(this.stepLine.getBounds());
+    this.map.fitBounds(this.stepLine.getBounds());
+  }
+
+  public reset() {
+    for (let pathline of this.routeElements) {
+      this.map.removeLayer(pathline);
+    }
+    if (this.stepLine !== undefined) this.map.removeLayer(this.stepLine);
+    this.buttons.replaceChildren();
+    this.start = undefined;
+    this.end = undefined;
   }
 }

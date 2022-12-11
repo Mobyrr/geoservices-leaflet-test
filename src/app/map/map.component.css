@@ -1,18 +1,22 @@
 .root {
   display: flex;
-  flex-wrap: wrap;
+  box-sizing: border-box;
+  align-items: flex-start;
+}
+
+.map {
+  margin-right: 20px;
+  flex: auto;
 }
 
 .map-container {
-  margin: 15px 0;
-}
-
-.map-frame {
   border: 1px solid black;
-  height: 500px;
-  width: 800px;
+  height: calc(100vh - 80px);
+
   box-shadow: 0 5px 10px #0002;
   border-radius: 4px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
 }
 
 #map {
@@ -21,12 +25,14 @@
 }
 
 #steps {
-  width: 270px;
-  height: 560px;
-  overflow-y: scroll;
+  flex: initial;
+  overflow-y: auto;
+  height: calc(100vh - 20px);
 }
 
 #steps >>> button {
   display: block;
-  width: 250px;
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: 2px;
 }
